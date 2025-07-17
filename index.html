@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crossword Puzzle Game</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <style>
+        .crossword-cell {
+            width: 25px;
+            height: 25px;
+            border: 1px solid #ccc;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 12px;
+            position: relative;
+        }
+        .crossword-cell.black {
+            background-color: #000;
+        }
+        .crossword-cell.active {
+            background-color: #3b82f6;
+            color: white;
+        }
+        .crossword-cell.highlighted {
+            background-color: #93c5fd;
+        }
+        .crossword-cell input {
+            width: 100%;
+            height: 100%;
+            border: none;
+            text-align: center;
+            font-size: 14px;
+            font-weight: bold;
+            background: transparent;
+            outline: none;
+        }
+        .cell-number {
+            position: absolute;
+            top: 1px;
+            left: 2px;
+            font-size: 7px;
+            font-weight: bold;
+            color: #666;
+        }
+        .dark .crossword-cell {
+            border-color: #4b5563;
+            background-color: #1f2937;
+            color: white;
+        }
+        .dark .crossword-cell.black {
+            background-color: #000;
+        }
+        .dark .cell-number {
+            color: #9ca3af;
+        }
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            flex-direction: column;
+        }
+        .loading-spinner {
+            border: 4px solid #f3f4f6;
+            border-top: 4px solid #3b82f6;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .loading-text {
+            color: white;
+            margin-top: 16px;
+            font-size: 18px;
+            text-align: center;
+        }
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 dark:bg-gray-900 transition-colors duration-200">
+    <div class="container mx-auto px-4 py-8">
+        <header class="text-center mb-8">
+            <h1 class="text-4xl font-bold text-gray-800 dark:text-white mb-4">Crossword Puzzle</h1>
+            <div class="flex justify-center space-x-4 mb-4">
+                <button id="generateBtn" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded">
+                    Generate Puzzle
+                </button>
+                <button id="validateBtn" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded">
+                    Validate Answers
+                </button>
+                <button id="toggleCluesBtn" class="bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded">
+                    Toggle Clues
+                </button>
+                <button id="darkModeBtn" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded">
+                    Dark Mode
+                </button>
+            </div>
+        </header>
+
+        <div class="flex flex-col lg:flex-row gap-8">
+            <div class="flex-1">
+                <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
+                    <h2 class="text-xl font-semibold text-gray-800 dark:text-white mb-4">Crossword Grid</h2>
+                    <div id="crosswordGrid" class="inline-block"></div>
+                </div>
+            </div>
+
+            <div class="w-full lg:w-80">
+                <div id="cluesPanel" class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
+                    <h2 class="text-xl font-semibold text-gray-800 dark:text-white mb-4">Clues</h2>
+                    <div class="space-y-4">
+                        <div>
+                            <h3 class="font-semibold text-gray-700 dark:text-gray-300 mb-2">Across</h3>
+                            <div id="acrossClues" class="space-y-1"></div>
+                        </div>
+                        <div>
+                            <h3 class="font-semibold text-gray-700 dark:text-gray-300 mb-2">Down</h3>
+                            <div id="downClues" class="space-y-1"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 mt-4">
+                    <h2 class="text-xl font-semibold text-gray-800 dark:text-white mb-4">Word List Selector</h2>
+                    <select id="wordListSelector" class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                        <option value="animals">Animals (10 words)</option>
+                        <option value="plants">Plants (10 words)</option>
+                        <option value="computers">Computers (10 words)</option>
+                        <option value="bugs">Bugs (10 words)</option>
+                        <option value="fish">Fish (10 words)</option>
+                        <option value="wordList4">Invalid Characters (Test)</option>
+                        <option value="wordList5">Duplicates (Test)</option>
+                    </select>
+                    <div id="validationResults" class="mt-4 p-3 rounded text-sm"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="crossword.js"></script>
+    <div id="loadingOverlay" class="loading-overlay hidden">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">
+            <div>Generating Crossword...</div>
+            <div style="font-size: 14px; margin-top: 8px;">Finding optimal word placement</div>
+            <div id="loadingProgress" style="font-size: 12px; margin-top: 4px;"></div>
+        </div>
+    </div>
+
+    <script src="crossword.js"></script>
+</body>
+</html>
