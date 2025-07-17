@@ -554,6 +554,7 @@ class CrosswordGame {
         // Reset completion flag and hints for new puzzle
         this.puzzleCompleted = false;
         this.hintsUsed = 0;
+        this.updateHintButton();
         
         // Update current selection tracking
         this.currentWordListSelection = selectedWordList;
@@ -1495,7 +1496,7 @@ class CrosswordGame {
         
         acrossWords.forEach(word => {
             const clueDiv = document.createElement('div');
-            clueDiv.className = 'text-sm text-gray-700 dark:text-gray-300 cursor-pointer hover:text-blue-500';
+            clueDiv.className = 'text-sm clue-text cursor-pointer';
             clueDiv.innerHTML = `<span class="font-bold">${word.number}.</span> ${word.clue}`;
             clueDiv.addEventListener('click', () => this.highlightWord(word));
             acrossClues.appendChild(clueDiv);
@@ -1503,7 +1504,7 @@ class CrosswordGame {
         
         downWords.forEach(word => {
             const clueDiv = document.createElement('div');
-            clueDiv.className = 'text-sm text-gray-700 dark:text-gray-300 cursor-pointer hover:text-blue-500';
+            clueDiv.className = 'text-sm clue-text cursor-pointer';
             clueDiv.innerHTML = `<span class="font-bold">${word.number}.</span> ${word.clue}`;
             clueDiv.addEventListener('click', () => this.highlightWord(word));
             downClues.appendChild(clueDiv);
@@ -1686,32 +1687,34 @@ class CrosswordGame {
         
         // Create completion overlay
         const overlay = document.createElement('div');
-        overlay.className = 'fixed top-0 left-0 w-full h-full bg-black bg-opacity-50 flex items-center justify-center z-50';
+        overlay.className = 'fixed top-0 left-0 w-full h-full bg-black bg-opacity-70 backdrop-blur-sm flex items-center justify-center z-50';
         
         const modal = document.createElement('div');
-        modal.className = 'bg-white dark:bg-gray-800 rounded-lg p-8 max-w-md mx-4 text-center shadow-xl';
+        modal.className = 'card-light rounded-2xl p-10 max-w-md mx-4 text-center shadow-2xl transform scale-95 animate-pulse';
+        modal.style.animation = 'modalAppear 0.5s ease-out forwards';
         
         const title = document.createElement('h2');
-        title.className = 'text-3xl font-bold text-green-600 dark:text-green-400 mb-4';
-        title.textContent = '🎉 Puzzle Completed! 🎉';
+        title.className = 'text-4xl font-bold text-primary mb-6';
+        title.textContent = '🎉 Puzzle Completed!';
         
         const message = document.createElement('p');
-        message.className = 'text-lg text-gray-800 dark:text-white mb-6';
+        message.className = 'text-lg text-secondary mb-8';
         message.textContent = 'Congratulations! You have successfully completed the crossword puzzle!';
         
         const stats = document.createElement('div');
-        stats.className = 'text-sm text-gray-600 dark:text-gray-300 mb-6';
+        stats.className = 'text-secondary mb-8 p-4 rounded-xl bg-gradient-to-r from-blue-50 to-purple-50 dark:from-gray-700 dark:to-gray-600';
         stats.innerHTML = `
-            <div>Total words: ${this.words.length}</div>
-            <div>All words correct!</div>
+            <div class="text-lg font-semibold">✨ Perfect Score! ✨</div>
+            <div class="mt-2">Total words: ${this.words.length}</div>
+            <div>Hints used: ${this.hintsUsed}</div>
         `;
         
         const buttonContainer = document.createElement('div');
         buttonContainer.className = 'flex space-x-4 justify-center';
         
         const newPuzzleBtn = document.createElement('button');
-        newPuzzleBtn.className = 'bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded font-semibold';
-        newPuzzleBtn.textContent = 'New Puzzle';
+        newPuzzleBtn.className = 'btn-primary text-white px-8 py-3 rounded-xl font-semibold text-lg';
+        newPuzzleBtn.textContent = '🎲 New Puzzle';
         newPuzzleBtn.onclick = () => {
             this.stopFireworks();
             document.body.removeChild(overlay);
@@ -1719,8 +1722,8 @@ class CrosswordGame {
         };
         
         const closeBtn = document.createElement('button');
-        closeBtn.className = 'bg-gray-500 hover:bg-gray-600 text-white px-6 py-2 rounded font-semibold';
-        closeBtn.textContent = 'Close';
+        closeBtn.className = 'btn-dark text-white px-8 py-3 rounded-xl font-semibold text-lg';
+        closeBtn.textContent = '✖️ Close';
         closeBtn.onclick = () => {
             this.stopFireworks();
             document.body.removeChild(overlay);
@@ -1951,7 +1954,7 @@ class CrosswordGame {
         document.body.classList.toggle('dark', this.isDarkMode);
         
         const button = document.getElementById('darkModeBtn');
-        button.textContent = this.isDarkMode ? 'Light Mode' : 'Dark Mode';
+        button.textContent = this.isDarkMode ? '☀️ Light Mode' : '🌙 Dark Mode';
     }
 
 

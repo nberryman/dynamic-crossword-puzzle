@@ -6,26 +6,33 @@
     <title>Crossword Puzzle Game</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <style>
+        /* Light Mode - Vibrant Colors */
         .crossword-cell {
             width: 25px;
             height: 25px;
-            border: 1px solid #ccc;
+            border: 2px solid #e5e7eb;
             display: flex;
             align-items: center;
             justify-content: center;
             font-weight: bold;
             font-size: 12px;
             position: relative;
+            background-color: #ffffff;
+            transition: all 0.2s ease;
         }
         .crossword-cell.black {
-            background-color: #000;
+            background-color: #1f2937;
+            border-color: #374151;
         }
         .crossword-cell.active {
             background-color: #3b82f6;
             color: white;
+            border-color: #2563eb;
+            box-shadow: 0 0 0 2px #93c5fd;
         }
         .crossword-cell.highlighted {
-            background-color: #93c5fd;
+            background-color: #dbeafe;
+            border-color: #60a5fa;
         }
         .crossword-cell input {
             width: 100%;
@@ -36,6 +43,7 @@
             font-weight: bold;
             background: transparent;
             outline: none;
+            color: #1f2937;
         }
         .cell-number {
             position: absolute;
@@ -43,26 +51,116 @@
             left: 2px;
             font-size: 7px;
             font-weight: bold;
-            color: #666;
+            color: #4b5563;
         }
+        
+        /* Dark Mode - High Contrast & Accessible */
         .dark .crossword-cell {
             border-color: #4b5563;
-            background-color: #1f2937;
-            color: white;
+            background-color: #374151;
+            color: #f9fafb;
         }
         .dark .crossword-cell.black {
-            background-color: #000;
+            background-color: #111827;
+            border-color: #1f2937;
+        }
+        .dark .crossword-cell.active {
+            background-color: #3b82f6;
+            color: #ffffff;
+            border-color: #2563eb;
+            box-shadow: 0 0 0 2px #60a5fa;
+        }
+        .dark .crossword-cell.highlighted {
+            background-color: #1e3a8a;
+            border-color: #3b82f6;
+        }
+        .dark .crossword-cell input {
+            color: #f9fafb;
         }
         .dark .cell-number {
-            color: #9ca3af;
+            color: #d1d5db;
         }
+        
+        /* Enhanced button styles */
+        .btn-primary {
+            background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+            border: none;
+            transition: all 0.3s ease;
+        }
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #2563eb, #1e40af);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+        }
+        
+        .btn-success {
+            background: linear-gradient(135deg, #10b981, #047857);
+        }
+        .btn-success:hover {
+            background: linear-gradient(135deg, #059669, #065f46);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+        }
+        
+        .btn-purple {
+            background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+        }
+        .btn-purple:hover {
+            background: linear-gradient(135deg, #7c3aed, #6d28d9);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(139, 92, 246, 0.4);
+        }
+        
+        .btn-dark {
+            background: linear-gradient(135deg, #6b7280, #4b5563);
+        }
+        .btn-dark:hover {
+            background: linear-gradient(135deg, #4b5563, #374151);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(107, 114, 128, 0.4);
+        }
+        
+        /* Dark mode button styles */
+        .dark .btn-primary {
+            background: linear-gradient(135deg, #60a5fa, #3b82f6);
+        }
+        .dark .btn-primary:hover {
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+            box-shadow: 0 4px 12px rgba(96, 165, 250, 0.3);
+        }
+        
+        .dark .btn-success {
+            background: linear-gradient(135deg, #34d399, #10b981);
+        }
+        .dark .btn-success:hover {
+            background: linear-gradient(135deg, #10b981, #059669);
+            box-shadow: 0 4px 12px rgba(52, 211, 153, 0.3);
+        }
+        
+        .dark .btn-purple {
+            background: linear-gradient(135deg, #a78bfa, #8b5cf6);
+        }
+        .dark .btn-purple:hover {
+            background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+            box-shadow: 0 4px 12px rgba(167, 139, 250, 0.3);
+        }
+        
+        .dark .btn-dark {
+            background: linear-gradient(135deg, #9ca3af, #6b7280);
+        }
+        .dark .btn-dark:hover {
+            background: linear-gradient(135deg, #6b7280, #4b5563);
+            box-shadow: 0 4px 12px rgba(156, 163, 175, 0.3);
+        }
+        /* Enhanced loading overlay */
         .loading-overlay {
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0, 0, 0, 0.7);
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(8px);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -70,12 +168,16 @@
             flex-direction: column;
         }
         .loading-spinner {
-            border: 4px solid #f3f4f6;
+            border: 4px solid rgba(255, 255, 255, 0.2);
             border-top: 4px solid #3b82f6;
             border-radius: 50%;
             width: 40px;
             height: 40px;
             animation: spin 1s linear infinite;
+        }
+        .dark .loading-spinner {
+            border: 4px solid rgba(255, 255, 255, 0.1);
+            border-top: 4px solid #60a5fa;
         }
         @keyframes spin {
             0% { transform: rotate(0deg); }
@@ -94,6 +196,93 @@
         }
         .hidden {
             display: none;
+        }
+        
+        /* Page background enhancements */
+        body {
+            background: linear-gradient(135deg, #f0f9ff 0%, #e0e7ff 100%) !important;
+            min-height: 100vh;
+            transition: all 0.3s ease;
+        }
+        
+        body.dark {
+            background: linear-gradient(135deg, #020617 0%, #0f172a 100%) !important;
+        }
+        
+        /* Enhanced card styling */
+        .card-light {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+        
+        .dark .card-light {
+            background: rgba(15, 23, 42, 0.98);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+        }
+        
+        /* Enhanced text colors */
+        .text-primary {
+            color: #1e40af;
+        }
+        .dark .text-primary {
+            color: #60a5fa;
+        }
+        
+        .text-secondary {
+            color: #64748b;
+        }
+        .dark .text-secondary {
+            color: #cbd5e1;
+        }
+        
+        /* Dropdown enhancements */
+        .enhanced-select {
+            background: rgba(255, 255, 255, 0.9);
+            border: 2px solid #e2e8f0;
+            transition: all 0.3s ease;
+        }
+        .enhanced-select:focus {
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+        .dark .enhanced-select {
+            background: rgba(55, 65, 81, 0.9);
+            border-color: #4b5563;
+            color: #f9fafb;
+        }
+        .dark .enhanced-select:focus {
+            border-color: #60a5fa;
+            box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.1);
+        }
+        
+        /* Clue text styling */
+        .clue-text {
+            color: #1f2937 !important;
+        }
+        .dark .clue-text {
+            color: #f9fafb !important;
+        }
+        .clue-text:hover {
+            color: #3b82f6 !important;
+        }
+        .dark .clue-text:hover {
+            color: #93c5fd !important;
+        }
+        
+        /* Modal Animation */
+        @keyframes modalAppear {
+            0% {
+                transform: scale(0.8);
+                opacity: 0;
+            }
+            100% {
+                transform: scale(1);
+                opacity: 1;
+            }
         }
         
         /* Fireworks Animation */
@@ -197,57 +386,57 @@
         }
     </style>
 </head>
-<body class="bg-gray-100 dark:bg-gray-900 transition-colors duration-200">
-    <div class="container mx-auto px-4 py-4">
-        <header class="text-center mb-4">
-            <h1 class="text-2xl font-bold text-gray-800 dark:text-white">Crossword Puzzle</h1>
+<body class="transition-all duration-300 ease-in-out">
+    <div class="container mx-auto px-4 py-6">
+        <header class="text-center mb-6">
+            <h1 class="text-4xl font-bold text-primary">🧩 Crossword Puzzle</h1>
         </header>
 
         <div class="flex flex-col lg:flex-row gap-8">
             <div class="flex-1">
-                <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
-                    <h2 class="text-xl font-semibold text-gray-800 dark:text-white mb-4 text-center">Crossword Grid</h2>
+                <div class="card-light rounded-xl p-8">
+                    <h2 class="text-2xl font-semibold text-primary mb-6 text-center">Crossword Grid</h2>
                     <div id="crosswordGrid" class="flex justify-center"></div>
                 </div>
             </div>
 
             <div class="w-full lg:w-80">
-                <div id="cluesPanel" class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4">
-                    <div class="flex justify-between items-center mb-4">
-                        <h2 class="text-lg font-semibold text-gray-800 dark:text-white">Clues</h2>
-                        <button id="darkModeBtn" class="bg-gray-500 hover:bg-gray-600 text-white px-2 py-1 text-xs rounded">
-                            Dark Mode
+                <div id="cluesPanel" class="card-light rounded-xl p-6">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-xl font-semibold text-primary">Clues</h2>
+                        <button id="darkModeBtn" class="btn-dark text-white px-3 py-2 text-sm rounded-lg">
+                            🌙 Dark Mode
                         </button>
                     </div>
-                    <div class="grid grid-cols-2 gap-2 mb-4">
-                        <button id="generateBtn" class="bg-blue-500 hover:bg-blue-600 text-white px-2 py-1 text-xs rounded">
-                            Generate Puzzle
+                    <div class="grid grid-cols-2 gap-3 mb-6">
+                        <button id="generateBtn" class="btn-primary text-white px-3 py-2 text-sm rounded-lg">
+                            🎲 Generate
                         </button>
-                        <button id="validateBtn" class="bg-green-500 hover:bg-green-600 text-white px-2 py-1 text-xs rounded">
-                            Validate Answers
+                        <button id="validateBtn" class="btn-success text-white px-3 py-2 text-sm rounded-lg">
+                            ✓ Validate
                         </button>
-                        <button id="randomLetterBtn" class="bg-purple-500 hover:bg-purple-600 text-white px-2 py-1 text-xs rounded col-span-2">
-                            Hint (5 left)
+                        <button id="randomLetterBtn" class="btn-purple text-white px-3 py-2 text-sm rounded-lg col-span-2">
+                            💡 Hint (5 left)
                         </button>
                     </div>
-                    <div class="space-y-4">
+                    <div class="space-y-6">
                         <div>
-                            <h3 class="font-semibold text-gray-700 dark:text-gray-300 mb-2">Across</h3>
-                            <div id="acrossClues" class="space-y-1"></div>
+                            <h3 class="font-semibold text-primary mb-3">📍 Across</h3>
+                            <div id="acrossClues" class="space-y-2"></div>
                         </div>
                         <div>
-                            <h3 class="font-semibold text-gray-700 dark:text-gray-300 mb-2">Down</h3>
-                            <div id="downClues" class="space-y-1"></div>
+                            <h3 class="font-semibold text-primary mb-3">📍 Down</h3>
+                            <div id="downClues" class="space-y-2"></div>
                         </div>
                     </div>
                 </div>
 
-                <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 mt-4">
-                    <h2 class="text-xl font-semibold text-gray-800 dark:text-white mb-4">Word List Selector</h2>
-                    <select id="wordListSelector" class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                <div class="card-light rounded-xl p-6 mt-6">
+                    <h2 class="text-xl font-semibold text-primary mb-4">🎯 Word Categories</h2>
+                    <select id="wordListSelector" class="enhanced-select w-full p-3 rounded-lg outline-none">
                         <option value="">Loading word lists...</option>
                     </select>
-                    <div id="validationResults" class="mt-4 p-3 rounded text-sm"></div>
+                    <div id="validationResults" class="mt-4 p-4 rounded-lg text-sm"></div>
                 </div>
             </div>
         </div>
