@@ -11,6 +11,7 @@ class CrosswordGame {
         this.hintsUsed = 0;
         this.maxHints = 5;
         this.currentWordListSelection = null;
+        this.lastClickedCell = null; // Track last clicked cell for direction toggling
         
         this.initialize();
     }
@@ -555,6 +556,7 @@ class CrosswordGame {
         this.puzzleCompleted = false;
         this.hintsUsed = 0;
         this.updateHintButton();
+        this.lastClickedCell = null; // Reset click tracking for new puzzle
         
         // Update current selection tracking
         this.currentWordListSelection = selectedWordList;
@@ -1464,6 +1466,7 @@ class CrosswordGame {
                     input.value = cell.userInput;
                     input.addEventListener('input', (e) => this.handleCellInput(e, row, col));
                     input.addEventListener('focus', (e) => this.handleCellFocus(e, row, col));
+                    input.addEventListener('click', (e) => this.handleCellClick(e, row, col));
                     input.addEventListener('keydown', (e) => this.handleKeyDown(e, row, col));
                     input.addEventListener('keypress', (e) => this.handleKeyPress(e, row, col));
                     cellDiv.appendChild(input);
@@ -1527,16 +1530,41 @@ class CrosswordGame {
     }
 
     handleCellFocus(event, row, col) {
+        // Initial focus behavior - just set up the first word without toggling
         const cell = this.grid[row][col];
         
+        if (cell.acrossWord) {
+            this.currentDirection = 'across';
+            this.currentWord = cell.acrossWord;
+        } else if (cell.downWord) {
+            this.currentDirection = 'down';
+            this.currentWord = cell.downWord;
+        }
+        
+        this.highlightCurrentWord();
+    }
+
+    handleCellClick(event, row, col) {
+        const cell = this.grid[row][col];
+        const cellKey = `${row},${col}`;
+        
+        // Check if this cell has both across and down words (intersection)
         if (cell.acrossWord && cell.downWord) {
-            this.currentDirection = this.currentDirection === 'across' ? 'across' : 'down';
+            // If clicking the same cell again, toggle direction
+            if (this.lastClickedCell === cellKey) {
+                this.currentDirection = this.currentDirection === 'across' ? 'down' : 'across';
+            } else {
+                // First click on a new intersection cell, default to across
+                this.currentDirection = 'across';
+            }
         } else if (cell.acrossWord) {
             this.currentDirection = 'across';
         } else if (cell.downWord) {
             this.currentDirection = 'down';
         }
         
+        // Update tracking
+        this.lastClickedCell = cellKey;
         this.currentWord = this.currentDirection === 'across' ? cell.acrossWord : cell.downWord;
         this.highlightCurrentWord();
     }
@@ -1940,7 +1968,7 @@ class CrosswordGame {
         const button = document.getElementById('randomLetterBtn');
         if (button) {
             const remaining = this.maxHints - this.hintsUsed;
-            button.textContent = `Hint (${remaining} left)`;
+            button.textContent = `💡 ${remaining}`;
             
             if (remaining === 0) {
                 button.disabled = true;
@@ -1954,7 +1982,7 @@ class CrosswordGame {
         document.body.classList.toggle('dark', this.isDarkMode);
         
         const button = document.getElementById('darkModeBtn');
-        button.textContent = this.isDarkMode ? '☀️ Light Mode' : '🌙 Dark Mode';
+        button.textContent = this.isDarkMode ? '☀️' : '🌙';
     }
 
 
