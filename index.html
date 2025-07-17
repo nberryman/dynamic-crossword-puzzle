@@ -138,13 +138,11 @@
                 <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 mt-4">
                     <h2 class="text-xl font-semibold text-gray-800 dark:text-white mb-4">Word List Selector</h2>
                     <select id="wordListSelector" class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white">
-                        <option value="animals">Animals (10 words)</option>
-                        <option value="plants">Plants (10 words)</option>
-                        <option value="computers">Computers (10 words)</option>
-                        <option value="bugs">Bugs (10 words)</option>
-                        <option value="fish">Fish (10 words)</option>
-                        <option value="wordList4">Invalid Characters (Test)</option>
-                        <option value="wordList5">Duplicates (Test)</option>
+                        <option value="animals">Animals (10 from 30 words)</option>
+                        <option value="plants">Plants (10 from 30 words)</option>
+                        <option value="computers">Computers (10 from 30 words)</option>
+                        <option value="bugs">Bugs (10 from 30 words)</option>
+                        <option value="fish">Fish (10 from 30 words)</option>
                     </select>
                     <div id="validationResults" class="mt-4 p-3 rounded text-sm"></div>
                 </div>
@@ -152,7 +150,6 @@
         </div>
     </div>
 
-    <script src="crossword.js"></script>
     <div id="loadingOverlay" class="loading-overlay hidden">
         <div class="loading-spinner"></div>
         <div class="loading-text">
@@ -162,6 +159,7 @@
         </div>
     </div>
 
+    <script src="puzzles.js"></script>
     <script src="crossword.js"></script>
 </body>
 </html>
