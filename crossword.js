@@ -8,6 +8,7 @@ class CrosswordGame {
         this.isDarkMode = false;
         this.showClues = true;
         this.wordLists = {};
+        this.puzzleCompleted = false;
         
         this.initialize();
     }
@@ -426,6 +427,9 @@ class CrosswordGame {
             return;
         }
 
+        // Reset completion flag for new puzzle
+        this.puzzleCompleted = false;
+        
         this.showLoading();
         
         await new Promise(resolve => setTimeout(resolve, 100));
@@ -643,9 +647,72 @@ class CrosswordGame {
             }
         }
         
+        // Renumber words to share numbers at intersections
+        this.optimizeWordNumbers();
+        
         this.addBlackSquares();
         this.renderGrid();
         this.renderClues();
+    }
+    
+    optimizeWordNumbers() {
+        // Clear existing numbers from grid
+        for (let row = 0; row < this.gridSize; row++) {
+            for (let col = 0; col < this.gridSize; col++) {
+                this.grid[row][col].numbers = [];
+            }
+        }
+        
+        // Find all starting positions and group by location
+        const startingPositions = new Map();
+        
+        this.words.forEach(word => {
+            const key = `${word.row},${word.col}`;
+            if (!startingPositions.has(key)) {
+                startingPositions.set(key, []);
+            }
+            startingPositions.get(key).push(word);
+        });
+        
+        // Assign numbers to starting positions
+        const sortedPositions = Array.from(startingPositions.entries()).sort((a, b) => {
+            const [rowA, colA] = a[0].split(',').map(Number);
+            const [rowB, colB] = b[0].split(',').map(Number);
+            
+            // Sort by row first, then by column
+            if (rowA !== rowB) return rowA - rowB;
+            return colA - colB;
+        });
+        
+        let currentNumber = 1;
+        
+        sortedPositions.forEach(([positionKey, wordsAtPosition]) => {
+            const [row, col] = positionKey.split(',').map(Number);
+            
+            // All words at this position get the same number
+            wordsAtPosition.forEach(word => {
+                word.number = currentNumber;
+            });
+            
+            // Add number to the grid cell
+            this.grid[row][col].numbers.push(currentNumber);
+            
+            // Update word references in grid cells
+            wordsAtPosition.forEach(word => {
+                for (let i = 0; i < word.word.length; i++) {
+                    const cellRow = word.direction === 'across' ? word.row : word.row + i;
+                    const cellCol = word.direction === 'across' ? word.col + i : word.col;
+                    
+                    if (word.direction === 'across') {
+                        this.grid[cellRow][cellCol].acrossWord = word;
+                    } else {
+                        this.grid[cellRow][cellCol].downWord = word;
+                    }
+                }
+            });
+            
+            currentNumber++;
+        });
     }
     
     findIsolatedWords() {
@@ -1142,12 +1209,14 @@ class CrosswordGame {
                     input.addEventListener('input', (e) => this.handleCellInput(e, row, col));
                     input.addEventListener('focus', (e) => this.handleCellFocus(e, row, col));
                     input.addEventListener('keydown', (e) => this.handleKeyDown(e, row, col));
+                    input.addEventListener('keypress', (e) => this.handleKeyPress(e, row, col));
                     cellDiv.appendChild(input);
                     
                     if (cell.numbers && cell.numbers.length > 0) {
                         const numberSpan = document.createElement('span');
                         numberSpan.className = 'cell-number';
-                        numberSpan.textContent = cell.numbers.sort((a, b) => a - b).join(',');
+                        // Since we now share numbers at intersections, there should only be one number per cell
+                        numberSpan.textContent = cell.numbers[0];
                         cellDiv.appendChild(numberSpan);
                     }
                 }
@@ -1190,9 +1259,15 @@ class CrosswordGame {
         const value = event.target.value.toUpperCase();
         this.grid[row][col].userInput = value;
         
+        // Update the input field to show the capitalized value
+        event.target.value = value;
+        
         if (value && this.currentWord) {
             this.moveToNextCell(row, col);
         }
+        
+        // Check if puzzle is completed after each input
+        this.checkPuzzleCompletion();
     }
 
     handleCellFocus(event, row, col) {
@@ -1208,6 +1283,13 @@ class CrosswordGame {
         
         this.currentWord = this.currentDirection === 'across' ? cell.acrossWord : cell.downWord;
         this.highlightCurrentWord();
+    }
+
+    handleKeyPress(event, row, col) {
+        // For regular character input, clear the field first so it overwrites
+        if (event.key.length === 1 && event.key.match(/[a-zA-Z]/)) {
+            event.target.value = '';
+        }
     }
 
     handleKeyDown(event, row, col) {
@@ -1305,6 +1387,118 @@ class CrosswordGame {
         });
         
         alert(`${correctCount} out of ${totalWords} words correct!`);
+    }
+    
+    checkPuzzleCompletion() {
+        // Don't check if already completed
+        if (this.puzzleCompleted) return;
+        
+        let correctCount = 0;
+        let totalWords = this.words.length;
+        let allCellsFilled = true;
+        
+        // Check each word
+        this.words.forEach(word => {
+            let isCorrect = true;
+            for (let i = 0; i < word.word.length; i++) {
+                const row = word.direction === 'down' ? word.row + i : word.row;
+                const col = word.direction === 'across' ? word.col + i : word.col;
+                const userInput = this.grid[row][col].userInput;
+                
+                if (!userInput || userInput.trim() === '') {
+                    allCellsFilled = false;
+                    isCorrect = false;
+                } else if (userInput !== word.word[i]) {
+                    isCorrect = false;
+                }
+            }
+            if (isCorrect) correctCount++;
+        });
+        
+        // Show completion message if puzzle is fully solved
+        if (correctCount === totalWords && allCellsFilled) {
+            this.puzzleCompleted = true;
+            this.showCompletionMessage();
+        }
+    }
+    
+    showCompletionMessage() {
+        // Create completion overlay
+        const overlay = document.createElement('div');
+        overlay.className = 'fixed top-0 left-0 w-full h-full bg-black bg-opacity-50 flex items-center justify-center z-50';
+        
+        const modal = document.createElement('div');
+        modal.className = 'bg-white dark:bg-gray-800 rounded-lg p-8 max-w-md mx-4 text-center shadow-xl';
+        
+        const title = document.createElement('h2');
+        title.className = 'text-3xl font-bold text-green-600 dark:text-green-400 mb-4';
+        title.textContent = '🎉 Puzzle Completed! 🎉';
+        
+        const message = document.createElement('p');
+        message.className = 'text-lg text-gray-800 dark:text-white mb-6';
+        message.textContent = 'Congratulations! You have successfully completed the crossword puzzle!';
+        
+        const stats = document.createElement('div');
+        stats.className = 'text-sm text-gray-600 dark:text-gray-300 mb-6';
+        stats.innerHTML = `
+            <div>Total words: ${this.words.length}</div>
+            <div>All words correct!</div>
+        `;
+        
+        const buttonContainer = document.createElement('div');
+        buttonContainer.className = 'flex space-x-4 justify-center';
+        
+        const newPuzzleBtn = document.createElement('button');
+        newPuzzleBtn.className = 'bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded font-semibold';
+        newPuzzleBtn.textContent = 'New Puzzle';
+        newPuzzleBtn.onclick = () => {
+            document.body.removeChild(overlay);
+            this.generatePuzzle();
+        };
+        
+        const closeBtn = document.createElement('button');
+        closeBtn.className = 'bg-gray-500 hover:bg-gray-600 text-white px-6 py-2 rounded font-semibold';
+        closeBtn.textContent = 'Close';
+        closeBtn.onclick = () => {
+            document.body.removeChild(overlay);
+        };
+        
+        buttonContainer.appendChild(newPuzzleBtn);
+        buttonContainer.appendChild(closeBtn);
+        
+        modal.appendChild(title);
+        modal.appendChild(message);
+        modal.appendChild(stats);
+        modal.appendChild(buttonContainer);
+        overlay.appendChild(modal);
+        
+        document.body.appendChild(overlay);
+        
+        // Add some celebration animation
+        this.addCelebrationAnimation();
+    }
+    
+    addCelebrationAnimation() {
+        // Add a subtle celebration effect to correct words
+        this.words.forEach(word => {
+            for (let i = 0; i < word.word.length; i++) {
+                const row = word.direction === 'down' ? word.row + i : word.row;
+                const col = word.direction === 'across' ? word.col + i : word.col;
+                const cellDiv = document.querySelector(`[data-row="${row}"][data-col="${col}"]`);
+                
+                if (cellDiv) {
+                    cellDiv.style.animation = 'pulse 0.5s ease-in-out';
+                    cellDiv.style.backgroundColor = '#22c55e';
+                    cellDiv.style.color = 'white';
+                    
+                    setTimeout(() => {
+                        cellDiv.style.animation = '';
+                        cellDiv.style.backgroundColor = '';
+                        cellDiv.style.color = '';
+                    }, 2000);
+                }
+            }
+        });
     }
 
     toggleClues() {

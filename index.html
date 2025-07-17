@@ -81,6 +81,11 @@
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
         .loading-text {
             color: white;
             margin-top: 16px;
@@ -139,10 +144,41 @@
                     <h2 class="text-xl font-semibold text-gray-800 dark:text-white mb-4">Word List Selector</h2>
                     <select id="wordListSelector" class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white">
                         <option value="animals">Animals (10 from 30 words)</option>
-                        <option value="plants">Plants (10 from 30 words)</option>
+                        <option value="food">Food (10 from 30 words)</option>
+                        <option value="sports">Sports (10 from 30 words)</option>
+                        <option value="colors">Colors (10 from 30 words)</option>
+                        <option value="weather">Weather (10 from 30 words)</option>
+                        <option value="music">Music (10 from 30 words)</option>
+                        <option value="transportation">Transportation (10 from 30 words)</option>
+                        <option value="nature">Nature (10 from 30 words)</option>
+                        <option value="technology">Technology (10 from 30 words)</option>
+                        <option value="clothing">Clothing (10 from 30 words)</option>
+                        <option value="school">School (10 from 30 words)</option>
+                        <option value="home">Home (10 from 30 words)</option>
+                        <option value="body">Body (10 from 30 words)</option>
+                        <option value="jobs">Jobs (10 from 30 words)</option>
+                        <option value="tools">Tools (10 from 30 words)</option>
+                        <option value="vegetables">Vegetables (10 from 30 words)</option>
+                        <option value="fruits">Fruits (10 from 30 words)</option>
+                        <option value="games">Games (10 from 30 words)</option>
+                        <option value="emotions">Emotions (10 from 30 words)</option>
+                        <option value="space">Space (10 from 30 words)</option>
+                        <option value="holidays">Holidays (10 from 30 words)</option>
+                        <option value="money">Money (10 from 30 words)</option>
+                        <option value="ocean">Ocean (10 from 30 words)</option>
+                        <option value="time">Time (10 from 30 words)</option>
+                        <option value="movies">Movies (10 from 30 words)</option>
+                        <option value="books">Books (10 from 30 words)</option>
+                        <option value="shapes">Shapes (10 from 30 words)</option>
+                        <option value="numbers">Numbers (10 from 30 words)</option>
                         <option value="computers">Computers (10 from 30 words)</option>
-                        <option value="bugs">Bugs (10 from 30 words)</option>
+                        <option value="insects">Insects (10 from 30 words)</option>
                         <option value="fish">Fish (10 from 30 words)</option>
+                        <option value="birds">Birds (10 from 30 words)</option>
+                        <option value="planets">Planets (10 from 30 words)</option>
+                        <option value="flowers">Flowers (10 from 30 words)</option>
+                        <option value="gems">Gems (10 from 30 words)</option>
+                        <option value="furniture">Furniture (10 from 30 words)</option>
                     </select>
                     <div id="validationResults" class="mt-4 p-3 rounded text-sm"></div>
                 </div>
