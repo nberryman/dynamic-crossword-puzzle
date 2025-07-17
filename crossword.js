@@ -6,9 +6,11 @@ class CrosswordGame {
         this.currentWord = null;
         this.currentDirection = 'across';
         this.isDarkMode = false;
-        this.showClues = true;
         this.wordLists = {};
         this.puzzleCompleted = false;
+        this.hintsUsed = 0;
+        this.maxHints = 5;
+        this.currentWordListSelection = null;
         
         this.initialize();
     }
@@ -21,7 +23,32 @@ class CrosswordGame {
     async initializeWordLists() {
         // Load puzzles from external file (now loaded via script tag)
         if (window.puzzles) {
-            this.wordLists = window.puzzles;
+            this.wordLists = {};
+            this.invalidWordLists = {};
+            
+            // Validate each word list and only include valid ones
+            Object.keys(window.puzzles).forEach(category => {
+                const wordList = window.puzzles[category];
+                const errors = this.validateWordList(wordList);
+                
+                if (errors[0] === "Word list is valid") {
+                    this.wordLists[category] = wordList;
+                } else {
+                    this.invalidWordLists[category] = {
+                        wordList: wordList,
+                        errors: errors
+                    };
+                    console.error(`❌ Invalid word list "${category}":`, errors);
+                }
+            });
+            
+            console.log(`✅ Loaded ${Object.keys(this.wordLists).length} valid word lists`);
+            if (Object.keys(this.invalidWordLists).length > 0) {
+                console.log(`❌ Found ${Object.keys(this.invalidWordLists).length} invalid word lists:`, Object.keys(this.invalidWordLists));
+            }
+            
+            // Update dropdown to only show valid categories
+            this.updateWordListDropdown();
         } else {
             console.error('Puzzles not loaded, using fallback');
             // Fallback to embedded puzzles
@@ -87,6 +114,50 @@ class CrosswordGame {
                     { word: "SEAHORSE", clue: "Horse-shaped marine fish" }
                 ]
             };
+        }
+    }
+
+    updateWordListDropdown() {
+        const selector = document.getElementById('wordListSelector');
+        if (selector) {
+            // Clear existing options
+            selector.innerHTML = '';
+            
+            // Add valid word lists to dropdown
+            Object.keys(this.wordLists).sort().forEach(category => {
+                const option = document.createElement('option');
+                option.value = category;
+                option.textContent = category.charAt(0).toUpperCase() + category.slice(1);
+                selector.appendChild(option);
+            });
+            
+            // Show validation summary in the validation results div
+            this.displayValidationSummary();
+        }
+    }
+
+    displayValidationSummary() {
+        const resultsDiv = document.getElementById('validationResults');
+        if (resultsDiv) {
+            const validCount = Object.keys(this.wordLists).length;
+            const invalidCount = Object.keys(this.invalidWordLists).length;
+            
+            if (invalidCount === 0) {
+                resultsDiv.innerHTML = `<div class="text-green-600 text-sm">✅ All ${validCount} word lists are valid!</div>`;
+                resultsDiv.className = 'mt-4 p-3 rounded text-sm bg-green-50 border border-green-200';
+            } else {
+                let html = `<div class="text-red-600 font-semibold">❌ ${invalidCount} invalid word lists found:</div>`;
+                Object.keys(this.invalidWordLists).forEach(category => {
+                    const errors = this.invalidWordLists[category].errors;
+                    html += `<div class="mt-2"><strong>${category}:</strong></div>`;
+                    errors.forEach(error => {
+                        html += `<div class="ml-4 text-sm">• ${error}</div>`;
+                    });
+                });
+                html += `<div class="mt-2 text-sm text-gray-600">${validCount} valid word lists are available for play.</div>`;
+                resultsDiv.innerHTML = html;
+                resultsDiv.className = 'mt-4 p-3 rounded text-sm bg-red-50 border border-red-200';
+            }
         }
     }
 
@@ -411,7 +482,65 @@ class CrosswordGame {
         this.words.push(wordData);
     }
 
+    validateAllWordLists() {
+        console.log('Validating all word lists...\n');
+        let totalErrors = 0;
+        const results = {};
+
+        Object.keys(this.wordLists).forEach(category => {
+            const wordList = this.wordLists[category];
+            const errors = this.validateWordList(wordList);
+            
+            if (errors[0] === "Word list is valid") {
+                console.log(`✅ ${category}: Valid (${wordList.length} words)`);
+                results[category] = { valid: true, wordCount: wordList.length };
+            } else {
+                console.log(`❌ ${category}: ERRORS FOUND`);
+                results[category] = { valid: false, errors: errors, wordCount: wordList.length };
+                errors.forEach(error => {
+                    console.log(`   - ${error}`);
+                    totalErrors++;
+                });
+                console.log('');
+            }
+        });
+
+        console.log(`\nValidation complete. Total errors found: ${totalErrors}`);
+        return results;
+    }
+
+    hasUserProgress() {
+        // Check if the puzzle exists and user has entered any input
+        if (!this.words || this.words.length === 0 || !this.grid) {
+            return false;
+        }
+        
+        // Check if any cells have user input
+        const actualHeight = this.actualGridHeight || this.gridSize;
+        const actualWidth = this.actualGridWidth || this.gridSize;
+        
+        for (let row = 0; row < actualHeight; row++) {
+            for (let col = 0; col < actualWidth; col++) {
+                if (this.grid[row] && this.grid[row][col] && 
+                    this.grid[row][col].userInput && 
+                    this.grid[row][col].userInput.trim() !== '') {
+                    return true;
+                }
+            }
+        }
+        
+        return false;
+    }
+
     async generatePuzzle() {
+        // Check if user has made progress and confirm before regenerating
+        if (this.hasUserProgress()) {
+            const confirmed = confirm('You have made progress on this puzzle. Generating a new puzzle will lose your current progress. Are you sure you want to continue?');
+            if (!confirmed) {
+                return;
+            }
+        }
+        
         const selectedWordList = document.getElementById('wordListSelector').value;
         const fullWordList = this.wordLists[selectedWordList];
         
@@ -420,15 +549,14 @@ class CrosswordGame {
             return;
         }
         
-        const validationResults = this.validateWordList(fullWordList);
-        this.displayValidationResults(validationResults);
-        
-        if (validationResults[0] !== "Word list is valid") {
-            return;
-        }
+        // No need to validate since we only load valid word lists
 
-        // Reset completion flag for new puzzle
+        // Reset completion flag and hints for new puzzle
         this.puzzleCompleted = false;
+        this.hintsUsed = 0;
+        
+        // Update current selection tracking
+        this.currentWordListSelection = selectedWordList;
         
         this.showLoading();
         
@@ -443,6 +571,7 @@ class CrosswordGame {
         await this.generatePuzzleWithTimeout(selectedWords);
         
         this.hideLoading();
+        this.updateHintButton();
     }
     
     async selectInterconnectedWords(fullWordList, targetCount) {
@@ -1314,6 +1443,8 @@ class CrosswordGame {
         table.style.gap = '1px';
         table.style.backgroundColor = '#ccc';
         table.style.padding = '1px';
+        table.style.margin = '0 auto';
+        table.style.justifySelf = 'center';
         
         for (let row = 0; row < actualHeight; row++) {
             for (let col = 0; col < actualWidth; col++) {
@@ -1550,6 +1681,9 @@ class CrosswordGame {
     }
     
     showCompletionMessage() {
+        // Create fireworks display
+        this.createFireworks();
+        
         // Create completion overlay
         const overlay = document.createElement('div');
         overlay.className = 'fixed top-0 left-0 w-full h-full bg-black bg-opacity-50 flex items-center justify-center z-50';
@@ -1579,6 +1713,7 @@ class CrosswordGame {
         newPuzzleBtn.className = 'bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded font-semibold';
         newPuzzleBtn.textContent = 'New Puzzle';
         newPuzzleBtn.onclick = () => {
+            this.stopFireworks();
             document.body.removeChild(overlay);
             this.generatePuzzle();
         };
@@ -1587,6 +1722,7 @@ class CrosswordGame {
         closeBtn.className = 'bg-gray-500 hover:bg-gray-600 text-white px-6 py-2 rounded font-semibold';
         closeBtn.textContent = 'Close';
         closeBtn.onclick = () => {
+            this.stopFireworks();
             document.body.removeChild(overlay);
         };
         
@@ -1603,6 +1739,99 @@ class CrosswordGame {
         
         // Add some celebration animation
         this.addCelebrationAnimation();
+    }
+    
+    createFireworks() {
+        // Create fireworks container
+        const fireworksContainer = document.createElement('div');
+        fireworksContainer.className = 'fireworks-container';
+        fireworksContainer.id = 'fireworks-display';
+        document.body.appendChild(fireworksContainer);
+        
+        // Colors for fireworks
+        const colors = ['red', 'blue', 'gold', 'purple', 'green'];
+        
+        // Store interval reference for cleanup
+        this.fireworksInterval = setInterval(() => {
+            // Create multiple fireworks simultaneously
+            for (let i = 0; i < 3; i++) {
+                setTimeout(() => {
+                    if (document.getElementById('fireworks-display')) {
+                        this.createSingleFirework(fireworksContainer, colors);
+                    }
+                }, i * 200); // Stagger by 200ms within each batch
+            }
+        }, 800); // Create new batch every 800ms
+        
+        // Initial burst of fireworks
+        for (let i = 0; i < 5; i++) {
+            setTimeout(() => {
+                if (document.getElementById('fireworks-display')) {
+                    this.createSingleFirework(fireworksContainer, colors);
+                }
+            }, i * 150);
+        }
+    }
+    
+    stopFireworks() {
+        // Clear the interval
+        if (this.fireworksInterval) {
+            clearInterval(this.fireworksInterval);
+            this.fireworksInterval = null;
+        }
+        
+        // Remove fireworks container
+        const fireworksContainer = document.getElementById('fireworks-display');
+        if (fireworksContainer) {
+            document.body.removeChild(fireworksContainer);
+        }
+    }
+    
+    createSingleFirework(container, colors) {
+        const color = colors[Math.floor(Math.random() * colors.length)];
+        const startX = Math.random() * window.innerWidth;
+        const endY = 100 + Math.random() * 200; // Burst between 100-300px from top
+        
+        // Create the launching firework
+        const firework = document.createElement('div');
+        firework.className = `firework firework-${color}`;
+        firework.style.left = `${startX}px`;
+        firework.style.bottom = '0px';
+        
+        container.appendChild(firework);
+        
+        // Create the burst effect after the firework reaches its peak
+        setTimeout(() => {
+            this.createFireworkBurst(container, startX, endY, color);
+            container.removeChild(firework);
+        }, 225); // Burst at 15% of the animation (1.5s * 0.15 = 225ms)
+    }
+    
+    createFireworkBurst(container, x, y, color) {
+        const particleCount = 16;
+        const radius = 120;
+        
+        for (let i = 0; i < particleCount; i++) {
+            const angle = (i / particleCount) * 2 * Math.PI;
+            const dx = Math.cos(angle) * radius + (Math.random() - 0.5) * 30;
+            const dy = Math.sin(angle) * radius + (Math.random() - 0.5) * 30;
+            
+            const particle = document.createElement('div');
+            particle.className = `firework-particle firework-${color}`;
+            particle.style.left = `${x}px`;
+            particle.style.top = `${y}px`;
+            particle.style.setProperty('--dx', `${dx}px`);
+            particle.style.setProperty('--dy', `${dy}px`);
+            
+            container.appendChild(particle);
+            
+            // Remove particle after animation
+            setTimeout(() => {
+                if (container.contains(particle)) {
+                    container.removeChild(particle);
+                }
+            }, 1200);
+        }
     }
     
     addCelebrationAnimation() {
@@ -1628,13 +1857,93 @@ class CrosswordGame {
         });
     }
 
-    toggleClues() {
-        this.showClues = !this.showClues;
-        const cluesPanel = document.getElementById('cluesPanel');
-        cluesPanel.style.display = this.showClues ? 'block' : 'none';
+    giveRandomLetter() {
+        // Check if hint limit has been reached
+        if (this.hintsUsed >= this.maxHints) {
+            alert(`You have already used all ${this.maxHints} free letters for this puzzle! Try to solve the rest on your own.`);
+            return;
+        }
         
-        const button = document.getElementById('toggleCluesBtn');
-        button.textContent = this.showClues ? 'Hide Clues' : 'Show Clues';
+        // Find all words that have at least one completely empty cell
+        const unsolvedWords = this.words.filter(word => {
+            for (let i = 0; i < word.word.length; i++) {
+                const row = word.direction === 'down' ? word.row + i : word.row;
+                const col = word.direction === 'across' ? word.col + i : word.col;
+                const userInput = this.grid[row][col].userInput;
+                
+                // Only consider completely empty cells (no user input at all)
+                if (!userInput || userInput.trim() === '') {
+                    return true;
+                }
+            }
+            return false;
+        });
+        
+        if (unsolvedWords.length === 0) {
+            alert('No empty cells available for hints! All cells either have letters or are complete.');
+            return;
+        }
+        
+        // Pick a random unsolved word
+        const randomWord = unsolvedWords[Math.floor(Math.random() * unsolvedWords.length)];
+        
+        // Find all completely empty positions in that word (no user input)
+        const emptyPositions = [];
+        for (let i = 0; i < randomWord.word.length; i++) {
+            const row = randomWord.direction === 'down' ? randomWord.row + i : randomWord.row;
+            const col = randomWord.direction === 'across' ? randomWord.col + i : randomWord.col;
+            const userInput = this.grid[row][col].userInput;
+            
+            // Only fill completely empty cells (preserve any user input, even if wrong)
+            if (!userInput || userInput.trim() === '') {
+                emptyPositions.push({ row, col, letter: randomWord.word[i], position: i });
+            }
+        }
+        
+        if (emptyPositions.length === 0) return;
+        
+        // Pick a random empty position
+        const randomPosition = emptyPositions[Math.floor(Math.random() * emptyPositions.length)];
+        
+        // Fill in the letter
+        this.grid[randomPosition.row][randomPosition.col].userInput = randomPosition.letter;
+        
+        // Update the input field in the DOM
+        const input = document.querySelector(`[data-row="${randomPosition.row}"][data-col="${randomPosition.col}"] input`);
+        if (input) {
+            input.value = randomPosition.letter;
+        }
+        
+        // Highlight the filled cell briefly
+        const cellDiv = document.querySelector(`[data-row="${randomPosition.row}"][data-col="${randomPosition.col}"]`);
+        if (cellDiv) {
+            cellDiv.style.backgroundColor = '#10b981'; // Green highlight
+            cellDiv.style.transition = 'background-color 0.3s';
+            
+            setTimeout(() => {
+                cellDiv.style.backgroundColor = '';
+            }, 1000);
+        }
+        
+        // Increment hint counter and update button text
+        this.hintsUsed++;
+        this.updateHintButton();
+        
+        // Check if puzzle is completed after this hint
+        this.checkPuzzleCompletion();
+    }
+
+    updateHintButton() {
+        const button = document.getElementById('randomLetterBtn');
+        if (button) {
+            const remaining = this.maxHints - this.hintsUsed;
+            button.textContent = `Hint (${remaining} left)`;
+            
+            if (remaining === 0) {
+                button.disabled = true;
+                button.classList.add('opacity-50', 'cursor-not-allowed');
+            }
+        }
     }
 
     toggleDarkMode() {
@@ -1645,18 +1954,6 @@ class CrosswordGame {
         button.textContent = this.isDarkMode ? 'Light Mode' : 'Dark Mode';
     }
 
-    displayValidationResults(results) {
-        const container = document.getElementById('validationResults');
-        container.innerHTML = '';
-        
-        if (results[0] === "Word list is valid") {
-            container.className = 'mt-4 p-3 rounded text-sm bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200';
-            container.textContent = 'Word list is valid';
-        } else {
-            container.className = 'mt-4 p-3 rounded text-sm bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200';
-            container.innerHTML = '<strong>Validation Errors:</strong><br>' + results.join('<br>');
-        }
-    }
 
     initializeEventListeners() {
         if (document.readyState === 'loading') {
@@ -1665,13 +1962,32 @@ class CrosswordGame {
             this.setupEventListeners();
         }
     }
+
+    handleWordListChange() {
+        // Check if user has made progress and confirm before changing puzzle type
+        if (this.hasUserProgress()) {
+            const confirmed = confirm('You have made progress on this puzzle. Changing the puzzle category will lose your current progress. Are you sure you want to continue?');
+            if (!confirmed) {
+                // Reset the dropdown to the previous selection
+                // We need to track the current selection to revert if needed
+                if (this.currentWordListSelection) {
+                    document.getElementById('wordListSelector').value = this.currentWordListSelection;
+                }
+                return;
+            }
+        }
+        
+        // Store the new selection and generate the puzzle
+        this.currentWordListSelection = document.getElementById('wordListSelector').value;
+        this.generatePuzzle();
+    }
     
     setupEventListeners() {
         document.getElementById('generateBtn').addEventListener('click', () => this.generatePuzzle());
         document.getElementById('validateBtn').addEventListener('click', () => this.validateAnswers());
-        document.getElementById('toggleCluesBtn').addEventListener('click', () => this.toggleClues());
+        document.getElementById('randomLetterBtn').addEventListener('click', () => this.giveRandomLetter());
         document.getElementById('darkModeBtn').addEventListener('click', () => this.toggleDarkMode());
-        document.getElementById('wordListSelector').addEventListener('change', () => this.generatePuzzle());
+        document.getElementById('wordListSelector').addEventListener('change', () => this.handleWordListChange());
         
         // Only generate puzzle if word lists are loaded
         if (Object.keys(this.wordLists).length > 0) {

@@ -95,39 +95,141 @@
         .hidden {
             display: none;
         }
+        
+        /* Fireworks Animation */
+        .fireworks-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 999; /* Behind the modal but above everything else */
+            overflow: hidden;
+        }
+        
+        .firework {
+            position: absolute;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            animation: firework 1.5s ease-out forwards;
+        }
+        
+        @keyframes firework {
+            0% {
+                transform: translateY(100vh) scale(0);
+                opacity: 1;
+            }
+            15% {
+                transform: translateY(20vh) scale(1);
+                opacity: 1;
+            }
+            100% {
+                transform: translateY(20vh) scale(0);
+                opacity: 0;
+            }
+        }
+        
+        .firework-particle {
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            animation: particle 1.2s ease-out forwards;
+        }
+        
+        @keyframes particle {
+            0% {
+                transform: translate(0, 0) scale(1);
+                opacity: 1;
+            }
+            100% {
+                transform: translate(var(--dx), var(--dy)) scale(0);
+                opacity: 0;
+            }
+        }
+        
+        .firework-burst {
+            position: absolute;
+            animation: burst 0.6s ease-out forwards;
+        }
+        
+        @keyframes burst {
+            0% {
+                transform: scale(0);
+                opacity: 1;
+            }
+            50% {
+                transform: scale(1);
+                opacity: 0.8;
+            }
+            100% {
+                transform: scale(1.5);
+                opacity: 0;
+            }
+        }
+        
+        /* Multiple firework colors */
+        .firework-red {
+            background: linear-gradient(45deg, #ff6b6b, #ff8e8e);
+            box-shadow: 0 0 20px #ff6b6b, 0 0 40px #ff6b6b, 0 0 60px #ff6b6b;
+        }
+        
+        .firework-blue {
+            background: linear-gradient(45deg, #4ecdc4, #45b7aa);
+            box-shadow: 0 0 20px #4ecdc4, 0 0 40px #4ecdc4, 0 0 60px #4ecdc4;
+        }
+        
+        .firework-gold {
+            background: linear-gradient(45deg, #ffd93d, #ffed4e);
+            box-shadow: 0 0 20px #ffd93d, 0 0 40px #ffd93d, 0 0 60px #ffd93d;
+        }
+        
+        .firework-purple {
+            background: linear-gradient(45deg, #a78bfa, #c4b5fd);
+            box-shadow: 0 0 20px #a78bfa, 0 0 40px #a78bfa, 0 0 60px #a78bfa;
+        }
+        
+        .firework-green {
+            background: linear-gradient(45deg, #10b981, #34d399);
+            box-shadow: 0 0 20px #10b981, 0 0 40px #10b981, 0 0 60px #10b981;
+        }
     </style>
 </head>
 <body class="bg-gray-100 dark:bg-gray-900 transition-colors duration-200">
-    <div class="container mx-auto px-4 py-8">
-        <header class="text-center mb-8">
-            <h1 class="text-4xl font-bold text-gray-800 dark:text-white mb-4">Crossword Puzzle</h1>
-            <div class="flex justify-center space-x-4 mb-4">
-                <button id="generateBtn" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded">
-                    Generate Puzzle
-                </button>
-                <button id="validateBtn" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded">
-                    Validate Answers
-                </button>
-                <button id="toggleCluesBtn" class="bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded">
-                    Toggle Clues
-                </button>
-                <button id="darkModeBtn" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded">
-                    Dark Mode
-                </button>
-            </div>
+    <div class="container mx-auto px-4 py-4">
+        <header class="text-center mb-4">
+            <h1 class="text-2xl font-bold text-gray-800 dark:text-white">Crossword Puzzle</h1>
         </header>
 
         <div class="flex flex-col lg:flex-row gap-8">
             <div class="flex-1">
                 <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
-                    <h2 class="text-xl font-semibold text-gray-800 dark:text-white mb-4">Crossword Grid</h2>
-                    <div id="crosswordGrid" class="inline-block"></div>
+                    <h2 class="text-xl font-semibold text-gray-800 dark:text-white mb-4 text-center">Crossword Grid</h2>
+                    <div id="crosswordGrid" class="flex justify-center"></div>
                 </div>
             </div>
 
             <div class="w-full lg:w-80">
-                <div id="cluesPanel" class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
-                    <h2 class="text-xl font-semibold text-gray-800 dark:text-white mb-4">Clues</h2>
+                <div id="cluesPanel" class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-lg font-semibold text-gray-800 dark:text-white">Clues</h2>
+                        <button id="darkModeBtn" class="bg-gray-500 hover:bg-gray-600 text-white px-2 py-1 text-xs rounded">
+                            Dark Mode
+                        </button>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2 mb-4">
+                        <button id="generateBtn" class="bg-blue-500 hover:bg-blue-600 text-white px-2 py-1 text-xs rounded">
+                            Generate Puzzle
+                        </button>
+                        <button id="validateBtn" class="bg-green-500 hover:bg-green-600 text-white px-2 py-1 text-xs rounded">
+                            Validate Answers
+                        </button>
+                        <button id="randomLetterBtn" class="bg-purple-500 hover:bg-purple-600 text-white px-2 py-1 text-xs rounded col-span-2">
+                            Hint (5 left)
+                        </button>
+                    </div>
                     <div class="space-y-4">
                         <div>
                             <h3 class="font-semibold text-gray-700 dark:text-gray-300 mb-2">Across</h3>
@@ -143,42 +245,7 @@
                 <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 mt-4">
                     <h2 class="text-xl font-semibold text-gray-800 dark:text-white mb-4">Word List Selector</h2>
                     <select id="wordListSelector" class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white">
-                        <option value="animals">Animals</option>
-                        <option value="food">Food</option>
-                        <option value="sports">Sports</option>
-                        <option value="colors">Colors</option>
-                        <option value="weather">Weather</option>
-                        <option value="music">Music</option>
-                        <option value="transportation">Transportation</option>
-                        <option value="nature">Nature</option>
-                        <option value="technology">Technology</option>
-                        <option value="clothing">Clothing</option>
-                        <option value="school">School</option>
-                        <option value="home">Home</option>
-                        <option value="body">Body</option>
-                        <option value="jobs">Jobs</option>
-                        <option value="tools">Tools</option>
-                        <option value="vegetables">Vegetables</option>
-                        <option value="fruits">Fruits</option>
-                        <option value="games">Games</option>
-                        <option value="emotions">Emotions</option>
-                        <option value="space">Space</option>
-                        <option value="holidays">Holidays</option>
-                        <option value="money">Money</option>
-                        <option value="ocean">Ocean</option>
-                        <option value="time">Time</option>
-                        <option value="movies">Movies</option>
-                        <option value="books">Books</option>
-                        <option value="shapes">Shapes</option>
-                        <option value="numbers">Numbers</option>
-                        <option value="computers">Computers</option>
-                        <option value="insects">Insects</option>
-                        <option value="fish">Fish</option>
-                        <option value="birds">Birds</option>
-                        <option value="planets">Planets</option>
-                        <option value="flowers">Flowers</option>
-                        <option value="gems">Gems</option>
-                        <option value="furniture">Furniture</option>
+                        <option value="">Loading word lists...</option>
                     </select>
                     <div id="validationResults" class="mt-4 p-3 rounded text-sm"></div>
                 </div>
