@@ -647,7 +647,10 @@ class CrosswordGame {
             }
         }
         
-        // Renumber words to share numbers at intersections
+        // Trim empty rows and columns for a more compact display
+        this.trimGrid();
+        
+        // Renumber words to share numbers at intersections (after trimming)
         this.optimizeWordNumbers();
         
         this.addBlackSquares();
@@ -657,8 +660,11 @@ class CrosswordGame {
     
     optimizeWordNumbers() {
         // Clear existing numbers from grid
-        for (let row = 0; row < this.gridSize; row++) {
-            for (let col = 0; col < this.gridSize; col++) {
+        const actualHeight = this.actualGridHeight || this.gridSize;
+        const actualWidth = this.actualGridWidth || this.gridSize;
+        
+        for (let row = 0; row < actualHeight; row++) {
+            for (let col = 0; col < actualWidth; col++) {
                 this.grid[row][col].numbers = [];
             }
         }
@@ -713,6 +719,116 @@ class CrosswordGame {
             
             currentNumber++;
         });
+    }
+    
+    trimGrid() {
+        // Find the actual bounds of the puzzle (min/max rows and columns with content)
+        let minRow = this.gridSize, maxRow = -1;
+        let minCol = this.gridSize, maxCol = -1;
+        
+        // Find the boundaries of the used area
+        for (let row = 0; row < this.gridSize; row++) {
+            for (let col = 0; col < this.gridSize; col++) {
+                if (this.grid[row][col].letter !== '') {
+                    minRow = Math.min(minRow, row);
+                    maxRow = Math.max(maxRow, row);
+                    minCol = Math.min(minCol, col);
+                    maxCol = Math.max(maxCol, col);
+                }
+            }
+        }
+        
+        // If no content found, don't trim (fallback to original grid)
+        if (minRow === this.gridSize || maxRow === -1) {
+            console.warn('No content found for trimming, keeping original grid');
+            this.actualGridHeight = this.gridSize;
+            this.actualGridWidth = this.gridSize;
+            return;
+        }
+        
+        // Add padding of 1 cell around the puzzle for better appearance
+        const padding = 1;
+        minRow = Math.max(0, minRow - padding);
+        maxRow = Math.min(this.gridSize - 1, maxRow + padding);
+        minCol = Math.max(0, minCol - padding);
+        maxCol = Math.min(this.gridSize - 1, maxCol + padding);
+        
+        // Create new trimmed grid
+        const trimmedHeight = maxRow - minRow + 1;
+        const trimmedWidth = maxCol - minCol + 1;
+        const trimmedGrid = Array(trimmedHeight).fill().map(() => 
+            Array(trimmedWidth).fill().map(() => ({
+                letter: '',
+                isBlack: true,
+                numbers: [],
+                acrossWord: null,
+                downWord: null,
+                userInput: ''
+            }))
+        );
+        
+        // Copy content to trimmed grid and update word positions
+        for (let row = minRow; row <= maxRow; row++) {
+            for (let col = minCol; col <= maxCol; col++) {
+                const newRow = row - minRow;
+                const newCol = col - minCol;
+                trimmedGrid[newRow][newCol] = { ...this.grid[row][col] };
+            }
+        }
+        
+        // Update word positions to match the new grid coordinates
+        this.words.forEach(word => {
+            word.row -= minRow;
+            word.col -= minCol;
+            
+            // Validate that coordinates are within bounds
+            if (word.row < 0 || word.col < 0 || 
+                word.row >= trimmedHeight || word.col >= trimmedWidth) {
+                console.error(`Word "${word.word}" has invalid coordinates after trimming:`, word.row, word.col);
+            }
+        });
+        
+        // Clear and rebuild grid references - don't update coordinates again
+        for (let row = 0; row < trimmedHeight; row++) {
+            for (let col = 0; col < trimmedWidth; col++) {
+                const cell = trimmedGrid[row][col];
+                cell.acrossWord = null;
+                cell.downWord = null;
+            }
+        }
+        
+        // Rebuild word references in grid cells using updated word coordinates
+        this.words.forEach(word => {
+            for (let i = 0; i < word.word.length; i++) {
+                const cellRow = word.direction === 'down' ? word.row + i : word.row;
+                const cellCol = word.direction === 'across' ? word.col + i : word.col;
+                
+                // Validate bounds before accessing
+                if (cellRow >= 0 && cellRow < trimmedHeight && 
+                    cellCol >= 0 && cellCol < trimmedWidth) {
+                    if (word.direction === 'across') {
+                        trimmedGrid[cellRow][cellCol].acrossWord = word;
+                    } else {
+                        trimmedGrid[cellRow][cellCol].downWord = word;
+                    }
+                } else {
+                    console.error(`Invalid cell access for word "${word.word}" at ${cellRow},${cellCol}`);
+                }
+            }
+        });
+        
+        // Replace the original grid with the trimmed version
+        this.grid = trimmedGrid;
+        
+        // Store original dimensions for potential future use
+        this.originalGridSize = 25;
+        this.actualGridHeight = trimmedHeight;
+        this.actualGridWidth = trimmedWidth;
+        
+        // Don't update gridSize - keep it as the logical grid size for bounds checking
+        // The rendering will use actualGridHeight/actualGridWidth for display
+        
+        console.log(`Grid trimmed from 25×25 to ${trimmedWidth}×${trimmedHeight}`);
     }
     
     findIsolatedWords() {
@@ -1170,8 +1286,11 @@ class CrosswordGame {
     }
 
     addBlackSquares() {
-        for (let row = 0; row < this.gridSize; row++) {
-            for (let col = 0; col < this.gridSize; col++) {
+        const actualHeight = this.actualGridHeight || this.gridSize;
+        const actualWidth = this.actualGridWidth || this.gridSize;
+        
+        for (let row = 0; row < actualHeight; row++) {
+            for (let col = 0; col < actualWidth; col++) {
                 const cell = this.grid[row][col];
                 if (cell.letter === '') {
                     cell.isBlack = true;
@@ -1186,13 +1305,18 @@ class CrosswordGame {
         
         const table = document.createElement('div');
         table.style.display = 'grid';
-        table.style.gridTemplateColumns = `repeat(${this.gridSize}, 25px)`;
+        
+        // Use actual grid dimensions (may be rectangular after trimming)
+        const actualWidth = this.actualGridWidth || this.gridSize;
+        const actualHeight = this.actualGridHeight || this.gridSize;
+        
+        table.style.gridTemplateColumns = `repeat(${actualWidth}, 25px)`;
         table.style.gap = '1px';
         table.style.backgroundColor = '#ccc';
         table.style.padding = '1px';
         
-        for (let row = 0; row < this.gridSize; row++) {
-            for (let col = 0; col < this.gridSize; col++) {
+        for (let row = 0; row < actualHeight; row++) {
+            for (let col = 0; col < actualWidth; col++) {
                 const cell = this.grid[row][col];
                 const cellDiv = document.createElement('div');
                 cellDiv.className = 'crossword-cell';
@@ -1312,7 +1436,10 @@ class CrosswordGame {
     }
 
     moveFocus(newRow, newCol) {
-        if (newRow >= 0 && newRow < this.gridSize && newCol >= 0 && newCol < this.gridSize) {
+        const actualWidth = this.actualGridWidth || this.gridSize;
+        const actualHeight = this.actualGridHeight || this.gridSize;
+        
+        if (newRow >= 0 && newRow < actualHeight && newCol >= 0 && newCol < actualWidth) {
             const cell = this.grid[newRow][newCol];
             if (!cell.isBlack) {
                 const input = document.querySelector(`[data-row="${newRow}"][data-col="${newCol}"] input`);
