@@ -8,8 +8,8 @@
     <style>
         /* Light Mode - Vibrant Colors */
         .crossword-cell {
-            width: 25px;
-            height: 25px;
+            width: 30px;
+            height: 30px;
             border: 2px solid #e5e7eb;
             display: flex;
             align-items: center;
@@ -262,15 +262,31 @@
         /* Clue text styling */
         .clue-text {
             color: #1f2937 !important;
+            padding: 4px 8px;
+            border-radius: 6px;
+            transition: all 0.2s ease;
         }
         .dark .clue-text {
             color: #f9fafb !important;
         }
         .clue-text:hover {
             color: #3b82f6 !important;
+            background-color: #f1f5f9;
         }
         .dark .clue-text:hover {
             color: #93c5fd !important;
+            background-color: #334155;
+        }
+        .clue-text.active-clue {
+            background-color: #dbeafe !important;
+            color: #1e40af !important;
+            font-weight: 600;
+            border-left: 4px solid #3b82f6;
+        }
+        .dark .clue-text.active-clue {
+            background-color: #1e3a8a !important;
+            color: #93c5fd !important;
+            border-left: 4px solid #60a5fa;
         }
         
         /* Modal Animation */
@@ -420,11 +436,11 @@
                     </div>
                     <div class="space-y-6">
                         <div>
-                            <h3 class="font-semibold text-primary mb-3">📍 Across</h3>
+                            <h3 class="font-semibold text-primary mb-3">↔️ Across</h3>
                             <div id="acrossClues" class="space-y-2"></div>
                         </div>
                         <div>
-                            <h3 class="font-semibold text-primary mb-3">📍 Down</h3>
+                            <h3 class="font-semibold text-primary mb-3">↕️ Down</h3>
                             <div id="downClues" class="space-y-2"></div>
                         </div>
                     </div>

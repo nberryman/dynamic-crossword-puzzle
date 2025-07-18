@@ -12,6 +12,7 @@ class CrosswordGame {
         this.maxHints = 5;
         this.currentWordListSelection = null;
         this.lastClickedCell = null; // Track last clicked cell for direction toggling
+        this.isAutoNavigating = false; // Track when we're automatically moving to next cell
         
         this.initialize();
     }
@@ -1442,7 +1443,7 @@ class CrosswordGame {
         const actualWidth = this.actualGridWidth || this.gridSize;
         const actualHeight = this.actualGridHeight || this.gridSize;
         
-        table.style.gridTemplateColumns = `repeat(${actualWidth}, 25px)`;
+        table.style.gridTemplateColumns = `repeat(${actualWidth}, 30px)`;
         table.style.gap = '1px';
         table.style.backgroundColor = '#ccc';
         table.style.padding = '1px';
@@ -1500,6 +1501,7 @@ class CrosswordGame {
         acrossWords.forEach(word => {
             const clueDiv = document.createElement('div');
             clueDiv.className = 'text-sm clue-text cursor-pointer';
+            clueDiv.dataset.wordId = `${word.number}-across`;
             clueDiv.innerHTML = `<span class="font-bold">${word.number}.</span> ${word.clue}`;
             clueDiv.addEventListener('click', () => this.highlightWord(word));
             acrossClues.appendChild(clueDiv);
@@ -1508,6 +1510,7 @@ class CrosswordGame {
         downWords.forEach(word => {
             const clueDiv = document.createElement('div');
             clueDiv.className = 'text-sm clue-text cursor-pointer';
+            clueDiv.dataset.wordId = `${word.number}-down`;
             clueDiv.innerHTML = `<span class="font-bold">${word.number}.</span> ${word.clue}`;
             clueDiv.addEventListener('click', () => this.highlightWord(word));
             downClues.appendChild(clueDiv);
@@ -1530,15 +1533,41 @@ class CrosswordGame {
     }
 
     handleCellFocus(event, row, col) {
-        // Initial focus behavior - just set up the first word without toggling
         const cell = this.grid[row][col];
         
-        if (cell.acrossWord) {
-            this.currentDirection = 'across';
-            this.currentWord = cell.acrossWord;
-        } else if (cell.downWord) {
-            this.currentDirection = 'down';
-            this.currentWord = cell.downWord;
+        // If we're auto-navigating, preserve the current direction and word
+        if (this.isAutoNavigating && this.currentWord && this.currentDirection) {
+            // Only update currentWord if we're still within the same word
+            if (this.currentDirection === 'across' && cell.acrossWord === this.currentWord) {
+                // Stay with the same across word
+            } else if (this.currentDirection === 'down' && cell.downWord === this.currentWord) {
+                // Stay with the same down word
+            } else {
+                // We've moved outside the current word, switch to available word
+                if (this.currentDirection === 'across' && cell.acrossWord) {
+                    this.currentWord = cell.acrossWord;
+                } else if (this.currentDirection === 'down' && cell.downWord) {
+                    this.currentWord = cell.downWord;
+                } else if (cell.acrossWord) {
+                    this.currentDirection = 'across';
+                    this.currentWord = cell.acrossWord;
+                } else if (cell.downWord) {
+                    this.currentDirection = 'down';
+                    this.currentWord = cell.downWord;
+                }
+            }
+        } else {
+            // For focus events that aren't from auto-navigation, only set direction/word 
+            // if we don't already have a current word, to avoid conflicts with click events
+            if (!this.currentWord) {
+                if (cell.acrossWord) {
+                    this.currentDirection = 'across';
+                    this.currentWord = cell.acrossWord;
+                } else if (cell.downWord) {
+                    this.currentDirection = 'down';
+                    this.currentWord = cell.downWord;
+                }
+            }
         }
         
         this.highlightCurrentWord();
@@ -1547,6 +1576,9 @@ class CrosswordGame {
     handleCellClick(event, row, col) {
         const cell = this.grid[row][col];
         const cellKey = `${row},${col}`;
+        
+        // Manual click should clear auto-navigation state
+        this.isAutoNavigating = false;
         
         // Check if this cell has both across and down words (intersection)
         if (cell.acrossWord && cell.downWord) {
@@ -1578,15 +1610,19 @@ class CrosswordGame {
 
     handleKeyDown(event, row, col) {
         if (event.key === 'ArrowRight') {
+            this.isAutoNavigating = false; // Manual navigation
             this.moveFocus(row, col + 1);
             event.preventDefault();
         } else if (event.key === 'ArrowLeft') {
+            this.isAutoNavigating = false; // Manual navigation
             this.moveFocus(row, col - 1);
             event.preventDefault();
         } else if (event.key === 'ArrowDown') {
+            this.isAutoNavigating = false; // Manual navigation
             this.moveFocus(row + 1, col);
             event.preventDefault();
         } else if (event.key === 'ArrowUp') {
+            this.isAutoNavigating = false; // Manual navigation
             this.moveFocus(row - 1, col);
             event.preventDefault();
         } else if (event.key === 'Backspace' && !event.target.value) {
@@ -1615,7 +1651,9 @@ class CrosswordGame {
         const nextRow = direction === 'down' ? row + 1 : row;
         const nextCol = direction === 'across' ? col + 1 : col;
         
+        this.isAutoNavigating = true;
         this.moveFocus(nextRow, nextCol);
+        this.isAutoNavigating = false;
     }
 
     moveToPreviousCell(row, col) {
@@ -1625,11 +1663,14 @@ class CrosswordGame {
         const prevRow = direction === 'down' ? row - 1 : row;
         const prevCol = direction === 'across' ? col - 1 : col;
         
+        this.isAutoNavigating = true;
         this.moveFocus(prevRow, prevCol);
+        this.isAutoNavigating = false;
     }
 
     highlightWord(word) {
         this.currentWord = word;
+        this.currentDirection = word.direction;
         this.highlightCurrentWord();
         
         const firstInput = document.querySelector(`[data-row="${word.row}"][data-col="${word.col}"] input`);
@@ -1637,11 +1678,18 @@ class CrosswordGame {
     }
 
     highlightCurrentWord() {
+        // Clear all grid cell highlighting
         document.querySelectorAll('.crossword-cell').forEach(cell => {
             cell.classList.remove('active', 'highlighted');
         });
         
+        // Clear all clue highlighting
+        document.querySelectorAll('.clue-text').forEach(clue => {
+            clue.classList.remove('active-clue');
+        });
+        
         if (this.currentWord) {
+            // Highlight grid cells
             for (let i = 0; i < this.currentWord.word.length; i++) {
                 const row = this.currentWord.direction === 'down' ? this.currentWord.row + i : this.currentWord.row;
                 const col = this.currentWord.direction === 'across' ? this.currentWord.col + i : this.currentWord.col;
@@ -1650,6 +1698,13 @@ class CrosswordGame {
                 if (cellDiv) {
                     cellDiv.classList.add('highlighted');
                 }
+            }
+            
+            // Highlight corresponding clue
+            const wordId = `${this.currentWord.number}-${this.currentWord.direction}`;
+            const clueDiv = document.querySelector(`[data-word-id="${wordId}"]`);
+            if (clueDiv) {
+                clueDiv.classList.add('active-clue');
             }
         }
     }
