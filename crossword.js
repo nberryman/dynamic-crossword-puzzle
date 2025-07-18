@@ -5,7 +5,7 @@ class CrosswordGame {
         this.words = [];
         this.currentWord = null;
         this.currentDirection = 'across';
-        this.isDarkMode = false;
+        this.isDarkMode = this.loadDarkModePreference();
         this.wordLists = {};
         this.puzzleCompleted = false;
         this.hintsUsed = 0;
@@ -20,6 +20,7 @@ class CrosswordGame {
     async initialize() {
         await this.initializeWordLists();
         this.initializeEventListeners();
+        this.applyDarkModePreference();
     }
 
     async initializeWordLists() {
@@ -168,7 +169,7 @@ class CrosswordGame {
         const words = new Set();
         const clues = new Set();
 
-        list.forEach(({ word, clue }, idx) => {
+        list.forEach(({ word, clue }) => {
             if (!/^[A-Z]+$/.test(word)) {
                 errors.push(`Invalid characters in word "${word}"`);
             }
@@ -1532,7 +1533,7 @@ class CrosswordGame {
         this.checkPuzzleCompletion();
     }
 
-    handleCellFocus(event, row, col) {
+    handleCellFocus(_, row, col) {
         const cell = this.grid[row][col];
         
         // If we're auto-navigating, preserve the current direction and word
@@ -1573,7 +1574,7 @@ class CrosswordGame {
         this.highlightCurrentWord();
     }
 
-    handleCellClick(event, row, col) {
+    handleCellClick(_, row, col) {
         const cell = this.grid[row][col];
         const cellKey = `${row},${col}`;
         
@@ -1601,7 +1602,7 @@ class CrosswordGame {
         this.highlightCurrentWord();
     }
 
-    handleKeyPress(event, row, col) {
+    handleKeyPress(event, _, __) {
         // For regular character input, clear the field first so it overwrites
         if (event.key.length === 1 && event.key.match(/[a-zA-Z]/)) {
             event.target.value = '';
@@ -1930,13 +1931,23 @@ class CrosswordGame {
                 
                 if (cellDiv) {
                     cellDiv.style.animation = 'pulse 0.5s ease-in-out';
-                    cellDiv.style.backgroundColor = '#22c55e';
-                    cellDiv.style.color = 'white';
+                    
+                    // Use different colors for light and dark mode with !important to override CSS
+                    if (this.isDarkMode) {
+                        cellDiv.style.setProperty('background-color', '#10b981', 'important'); // Bright green for dark mode
+                        cellDiv.style.setProperty('color', '#ffffff', 'important'); // Pure white text
+                        cellDiv.style.setProperty('font-weight', 'bold', 'important'); // Bold text
+                    } else {
+                        cellDiv.style.setProperty('background-color', '#22c55e', 'important'); // Light green for light mode
+                        cellDiv.style.setProperty('color', '#ffffff', 'important'); // White text
+                        cellDiv.style.setProperty('font-weight', 'bold', 'important'); // Bold text
+                    }
                     
                     setTimeout(() => {
                         cellDiv.style.animation = '';
-                        cellDiv.style.backgroundColor = '';
-                        cellDiv.style.color = '';
+                        cellDiv.style.removeProperty('background-color');
+                        cellDiv.style.removeProperty('color');
+                        cellDiv.style.removeProperty('font-weight');
                     }, 2000);
                 }
             }
@@ -1944,12 +1955,6 @@ class CrosswordGame {
     }
 
     giveRandomLetter() {
-        // Check if hint limit has been reached
-        if (this.hintsUsed >= this.maxHints) {
-            alert(`You have already used all ${this.maxHints} free letters for this puzzle! Try to solve the rest on your own.`);
-            return;
-        }
-        
         // Find all words that have at least one completely empty cell
         const unsolvedWords = this.words.filter(word => {
             for (let i = 0; i < word.word.length; i++) {
@@ -2022,13 +2027,40 @@ class CrosswordGame {
     updateHintButton() {
         const button = document.getElementById('randomLetterBtn');
         if (button) {
-            const remaining = this.maxHints - this.hintsUsed;
-            button.textContent = `💡 ${remaining}`;
+            button.textContent = `💡 ${this.hintsUsed}`;
             
-            if (remaining === 0) {
-                button.disabled = true;
-                button.classList.add('opacity-50', 'cursor-not-allowed');
-            }
+            // Remove any disabled state (no longer needed)
+            button.disabled = false;
+            button.classList.remove('opacity-50', 'cursor-not-allowed');
+        }
+    }
+
+    loadDarkModePreference() {
+        try {
+            const saved = localStorage.getItem('crossword-dark-mode');
+            return saved === 'true';
+        } catch (error) {
+            console.warn('Could not load dark mode preference:', error);
+            return false; // Default to light mode
+        }
+    }
+
+    saveDarkModePreference() {
+        try {
+            localStorage.setItem('crossword-dark-mode', this.isDarkMode.toString());
+        } catch (error) {
+            console.warn('Could not save dark mode preference:', error);
+        }
+    }
+
+    applyDarkModePreference() {
+        // Apply the loaded dark mode preference to the DOM
+        document.body.classList.toggle('dark', this.isDarkMode);
+        
+        // Update the button text if it exists
+        const button = document.getElementById('darkModeBtn');
+        if (button) {
+            button.textContent = this.isDarkMode ? '☀️' : '🌙';
         }
     }
 
@@ -2038,6 +2070,9 @@ class CrosswordGame {
         
         const button = document.getElementById('darkModeBtn');
         button.textContent = this.isDarkMode ? '☀️' : '🌙';
+        
+        // Save the preference
+        this.saveDarkModePreference();
     }
 
 
